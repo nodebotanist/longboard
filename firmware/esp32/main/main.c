@@ -362,11 +362,14 @@ void app_main(void)
     xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);
 
     int val = 0;
+    int oldval = 0;
     bool crash = false;
     while (true) {
+        oldval = val;
         val = adc1_get_voltage(ADC1_CHANNEL_0);
-        if(val >= 1700){
+        if(val - oldval >= 100 || oldval - val >= 100){
           crash = true;
+          printf("crash detected!");
         } else {
           crash = false;
         }
