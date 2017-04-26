@@ -68,8 +68,12 @@ static EventGroupHandle_t wifi_event_group;
    to the AP with an IP? */
 const int CONNECTED_BIT = BIT0;
 
-void rainbow(void *pvParameters)
-{
+bool rainbowMode = true;
+bool rainbowStarted = false;
+bool color = false;
+bool colorStarted = false;
+
+void rainbow(void *pvParameters) {
   const uint8_t anim_step = 10;
   const uint8_t anim_max = 250;
   const uint8_t pixel_count = 51; // Number of your "pixels"
@@ -83,7 +87,9 @@ void rainbow(void *pvParameters)
 
   pixels = malloc(sizeof(rgbVal) * pixel_count);
 
-  while (1) {
+  rainbowStarted = true;
+
+  while (rainbowMode) {
     color = color2;
     step = step2;
 
@@ -133,6 +139,33 @@ void rainbow(void *pvParameters)
 
     delay_ms(delay);
   }
+
+  rainbowStarted = false;
+  vTaskDelete( NULL );
+}
+
+void setColor(void *pvParameters) {
+  const uint8_t anim_step = 10;
+  const uint8_t anim_max = 250;
+  const uint8_t pixel_count = 51; // Number of your "pixels"
+  const uint8_t delay = 1000; // duration between color changes
+  rgbVal currentColor = makeRGBVal(anim_max, 0, 0);
+  rgbVal *pixels;
+  pixels = malloc(sizeof(rgbVal) * pixel_count);
+  colorStarted = true;
+
+  while(color){
+    for (uint8_t i = 0; i < pixel_count; i++) {
+      pixels[i] = currentColor;
+
+    }
+    ws2812_setColors(pixel_count, pixels);
+    delay_ms(delay);
+  }
+
+  colorStarted = false;
+  vTaskDelete( NULL );
+
 }
 
 esp_err_t event_handler(void *ctx, system_event_t *event)
@@ -320,7 +353,7 @@ void app_main(void)
     ESP_ERROR_CHECK( esp_wifi_start() );
 
     adc1_config_width(ADC_WIDTH_12Bit);
-    adc1_config_channel_atten(ADC1_CHANNEL_0,ADC_ATTEN_0db);
+    adc1_config_channel_atten(ADC1_CHANNEL_0,ADC_ATTEN_11db);
 
     ws2812_init(WS2812_PIN);
     xTaskCreate(rainbow, "ws2812 rainbow demo", 4096, NULL, 10, NULL);
@@ -329,17 +362,15 @@ void app_main(void)
     xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);
 
     int val = 0;
-    int oldval = 0;
     bool crash = false;
     while (true) {
-        oldval = val;
         val = adc1_get_voltage(ADC1_CHANNEL_0);
-        if(val - oldval < -10){
+        if(val >= 1700){
           crash = true;
         } else {
           crash = false;
         }
         printf("Accel readout: %d\n", val);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
