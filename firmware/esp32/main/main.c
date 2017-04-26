@@ -49,13 +49,13 @@ const static char http_index_hml[] = "<!DOCTYPE html>"
       "</html>\n";
 
 /* Constants that aren't configurable in menuconfig */
-#define WEB_SERVER "example.com"
+#define WEB_SERVER "7bmmod4zbg.execute-api.us-east-1.amazonaws.com"
 #define WEB_PORT 80
-#define WEB_URL "http://example.com/"
+#define WEB_URL "https://7bmmod4zbg.execute-api.us-east-1.amazonaws.com/prod/color"
 
 static const char *TAG = "example";
 
-static const char *REQUEST = "GET " WEB_URL " HTTP/1.0\r\n"
+static const char *REQUEST = "GET " WEB_URL " HTTP/1.1\r\n"
     "Host: "WEB_SERVER"\r\n"
     "User-Agent: esp-idf/1.0 esp32\r\n"
     "\r\n";
@@ -72,6 +72,7 @@ bool rainbowMode = true;
 bool rainbowStarted = false;
 bool color = false;
 bool colorStarted = false;
+int currentHue = 75;
 
 void rainbow(void *pvParameters) {
   const uint8_t anim_step = 10;
@@ -84,9 +85,7 @@ void rainbow(void *pvParameters) {
   uint8_t step2 = 0;
   rgbVal *pixels;
 
-
   pixels = malloc(sizeof(rgbVal) * pixel_count);
-
   rainbowStarted = true;
 
   while (rainbowMode) {
@@ -157,8 +156,8 @@ void setColor(void *pvParameters) {
   while(color){
     for (uint8_t i = 0; i < pixel_count; i++) {
       pixels[i] = currentColor;
-
     }
+
     ws2812_setColors(pixel_count, pixels);
     delay_ms(delay);
   }
@@ -273,7 +272,7 @@ static void http_get_task(void *pvParameters)
                             // false, true, portMAX_DELAY);
         ESP_LOGI(TAG, "Connected to AP");
 
-        int err = getaddrinfo(WEB_SERVER, "80", &hints, &res);
+        int err = getaddrinfo(WEB_SERVER, "443", &hints, &res);
 
         if(err != 0 || res == NULL) {
             ESP_LOGE(TAG, "DNS lookup failed err=%d res=%p", err, res);
@@ -357,6 +356,7 @@ void app_main(void)
 
     ws2812_init(WS2812_PIN);
     xTaskCreate(rainbow, "ws2812 rainbow demo", 4096, NULL, 10, NULL);
+    xTaskCreate(setColor, "ws2812 rainbow demo", 4096, NULL, 10, NULL);
 
     xTaskCreate(&http_server, "http_server", 2048, NULL, 5, NULL);
     xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);

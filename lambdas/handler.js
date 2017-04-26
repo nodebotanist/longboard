@@ -20,10 +20,7 @@ module.exports.crash = (event, context, callback) => {
 };
 
 module.exports.color = (event, context, callback) => {
-  const response = {
-    statusCode: 200,
-    body: currentColor
-  };
+  const response = currentColor
 
   callback(null, response);
 
